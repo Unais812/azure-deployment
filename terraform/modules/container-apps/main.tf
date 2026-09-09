@@ -16,6 +16,7 @@ resource "azurerm_container_app_environment" "environment" {
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
   infrastructure_subnet_id   = var.container_apps_subnet_id
+  public_network_access = "Disabled"
   tags = {
     project = "2048"
   }                      
@@ -51,8 +52,31 @@ resource "azurerm_container_app" "app" {
       image  = "${var.acr_login_server}/${var.container_name}:${var.container_image_tag}"
       cpu    = 0.25
       memory = "0.5Gi"
+
+    liveness_probe {
+        transport               = "HTTP"
+        port                    = 3000
+        path                    = "/"
+        initial_delay           = 5
+        interval_seconds        = 30
+        timeout                 = 5
+        failure_count_threshold = 3
+      }
+
+    readiness_probe {
+        transport               = "HTTP"
+        port                    = 3000
+        path                    = "/"
+        initial_delay           = 2
+        interval_seconds        = 10
+        timeout                 = 5
+        failure_count_threshold = 3
+        success_count_threshold = 1
+      }
     }
   }
+
+  
    ingress {
     external_enabled = true
     target_port      = 3000
