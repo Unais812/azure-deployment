@@ -15,7 +15,6 @@ resource "azurerm_container_app_environment" "environment" {
   resource_group_name        = var.resource_group_name
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
-  zone_redundancy_enabled    = true
   infrastructure_subnet_id   = var.container_apps_subnet_id
   tags = {
     project = "2048"
