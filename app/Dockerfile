@@ -10,7 +10,7 @@ FROM python@sha256:e55523f127124e5edc03ba201e3dbbc85172a2ec40d8651ac752364b23dfd
 
 WORKDIR /app
 
-COPY --from=builder /app/index.html /app 
+COPY --from=builder /app /app 
 
 RUN addgroup --system group && adduser --system user
 
