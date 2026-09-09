@@ -1,0 +1,55 @@
+name: Terraform Scan Infrastructure 
+
+on: 
+  push:
+    paths:
+      - "**/*.tf"
+
+jobs:
+  terraform_scan: # Job: Terraform scan
+    runs-on: ubuntu-latest # Runner: Ubuntu
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4 
+
+    - name: Configure Terraform Azure credentials
+      env:
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      run: |
+        client_id="$(jq -r '.clientId' <<< "$AZURE_CREDENTIALS")"
+        client_secret="$(jq -r '.clientSecret' <<< "$AZURE_CREDENTIALS")"
+        subscription_id="$(jq -r '.subscriptionId' <<< "$AZURE_CREDENTIALS")"
+        tenant_id="$(jq -r '.tenantId' <<< "$AZURE_CREDENTIALS")"
+
+    - name: Azure Login
+      uses: azure/login@v3
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.8.5
+    - name: initialise terraform
+      run: terraform init
+
+# Implement Checkov scanning for security vulnerabilities
+
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+    - name: Test with Checkov
+      id: checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: ./terraform
+        framework: terraform 
+
+    - name: Terraform fmt
+      run: terraform fmt
+    - name: Terraform plan
+      run: terraform plan
