@@ -27,7 +27,7 @@ variable "identity_id" {
 variable "container_name" {
   description = "name of container"
   type = string
-  default = "container-2048"
+  default = "container-apps-2048"
 }
 
 variable "container_image_tag" {
