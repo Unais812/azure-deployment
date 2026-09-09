@@ -1,0 +1,54 @@
+name: Terraform Apply Infrastructure 
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker-push:
+        description: 'Do you want to push? Type "yes" to proceed'
+        type: string
+        required: true
+
+env:
+  RESOURCE_GROUP_NAME: ${{ secrets.RESOURCE_GROUP_NAME }}
+  STORAGE_ACCOUNT_NAME: ${{ secrets.STORAGE_ACCOUNT_NAME }}
+  CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+  TFSTATE_KEY: ${{ secrets.TFSTATE_KEY }}
+
+jobs:
+  terraform_apply: # Job: Terraform apply
+    runs-on: ubuntu-latest # Runner: Ubuntu
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4 
+
+    - name: Configure Terraform Azure credentials
+      env:
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      run: |
+        client_id="$(jq -r '.clientId' <<< "$AZURE_CREDENTIALS")"
+        client_secret="$(jq -r '.clientSecret' <<< "$AZURE_CREDENTIALS")"
+        subscription_id="$(jq -r '.subscriptionId' <<< "$AZURE_CREDENTIALS")"
+        tenant_id="$(jq -r '.tenantId' <<< "$AZURE_CREDENTIALS")"
+
+    - name: Azure Login
+      uses: azure/login@v3
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2 
+      with:
+        terraform_version: 1.7.0 
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="resource_group_name=${{ env.RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" \
+          -backend-config="container_name=${{ env.CONTAINER_NAME }}" \
+          -backend-config="key=${{ env.TFSTATE_KEY }}"
+
+    - name: Terraform apply
+      run: terraform apply -auto-approve 
