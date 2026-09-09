@@ -1,0 +1,55 @@
+name: Docker push
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker-push:
+        description: 'Do you want to push? Type "yes" to proceed'
+        type: string
+        required: true
+
+env:
+  ACR_REGISTRY: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
+  ACR_REPOSITORY: ${{ secrets.AZURE_ACR_REPOSITORY }}
+  IMAGE_TAG: latest
+
+jobs:
+  Cypress-Test:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Azure ACR details
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+
+      - name: Build the tagged Docker image
+        id: build-image
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            -t "$ACR_REGISTRY/$ACR_REPOSITORY:$IMAGE_TAG" \
+            ./app
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/${{ secrets.AZURE_ACR_REPOSITORY }}:latest
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'MEDIUM'
+
+      - name: push image to ACR
+        run: |
+          docker push "$ACR_REGISTRY/$ACR_REPOSITORY:$IMAGE_TAG"
