@@ -7,7 +7,6 @@ resource "azurerm_user_assigned_identity" "main" {
   }
 }
 
-# Container App — pull images from ACR
 resource "azurerm_role_assignment" "acr_pull" {
   scope                = var.acr_id
   role_definition_name = "AcrPull"
